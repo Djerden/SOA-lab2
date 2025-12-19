@@ -1,0 +1,23 @@
+embed-server --std-out=echo
+
+# Добавляем модуль PostgreSQL (если ещё нет)
+if (outcome != success) of /subsystem=datasources/jdbc-driver=postgresql:read-resource
+    module add --name=org.postgresql --resources=/opt/jboss/wildfly/modules/org/postgresql/main/postgresql.jar --dependencies=javax.api,javax.transaction.api
+    /subsystem=datasources/jdbc-driver=postgresql:add(driver-name=postgresql, driver-module-name=org.postgresql, driver-class-name=org.postgresql.Driver)
+end-if
+
+# Создаём datasource CityDS, если ещё нет
+if (outcome != success) of /subsystem=datasources/data-source=CityDS:read-resource
+    /subsystem=datasources/data-source=CityDS:add(
+        jndi-name=java:/jdbc/CityDS,
+        driver-name=postgresql,
+        connection-url="jdbc:postgresql://postgres:5432/postgres",
+        user-name="postgres",
+        password="postgres",
+        enabled=true,
+        min-pool-size=2,
+        max-pool-size=20
+    )
+end-if
+
+stop-embedded-server

@@ -1,0 +1,8 @@
+<jboss-deployment-structure>
+    <deployment>
+        <exclude-subsystems>
+            <subsystem name="datasources"/>
+            <subsystem name="jpa"/>
+        </exclude-subsystems>
+    </deployment>
+</jboss-deployment-structure>

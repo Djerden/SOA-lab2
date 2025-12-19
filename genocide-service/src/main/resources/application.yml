@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: genocide-service
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+city-service:
+  base-url: http://localhost:8080/city-service/

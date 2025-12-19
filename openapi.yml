@@ -1,0 +1,400 @@
+openapi: 3.1.0
+
+info:
+  title: City API
+  version: 1.0.0
+  description: API для управления городами
+
+servers:
+  - url: http://localhost:8080
+    description: url для локальной разработки
+
+tags:
+  - name: Cities
+    description: Операции управления объектами City
+  - name: Genocide
+    description: Специальные варварские операции
+
+paths:
+  /cities/filter:
+    post:
+      tags: [ Cities ]
+      summary: Найти города c пагинацией, сортировками и фильтрами
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CityFilterRequest'
+      responses:
+        '200':
+          description: Список найденных городов с метаданными пагинации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityFilterResponse'
+
+  /cities:
+    post:
+      tags: [Cities]
+      summary: Добавить новый город
+      description: Добавляет новый объект City в коллекцию.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCityRequest'
+      responses:
+        '201':
+          description: Город успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+        '400':
+          description: Ошибка валидации данных
+
+  /cities/{id}:
+    get:
+      tags: [Cities]
+      summary: Получить город по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Найденный город
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+        '404':
+          description: Город не найден
+
+    put:
+      tags: [Cities]
+      summary: Обновить город по ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCityRequest'
+      responses:
+        '200':
+          description: Город обновлён
+        '400':
+          description: Ошибка валидации
+        '404':
+          description: Город не найден
+
+    delete:
+      tags: [Cities]
+      summary: Удалить город по ID
+      responses:
+        '204':
+          description: Город удалён
+        '404':
+          description: Город не найден
+
+  /cities/by-governor:
+    delete:
+      tags: [Cities]
+      summary: Удалить все города по governor.age
+      parameters:
+        - name: age
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Удалено несколько объектов
+
+  /cities/by-min-coordinates:
+    get:
+      tags: [Cities]
+      summary: Получить город с минимальными координатами
+      responses:
+        '200':
+          description: Один город с минимальными координатами
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+
+  /cities/count-by-climate:
+    post:
+      tags: [Cities]
+      summary: Получить количество городов по climate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                climate:
+                  $ref: '#/components/schemas/Climate'
+              required: [ climate ]
+              example:
+                climate: STEPPE
+      responses:
+        '200':
+          description: Количество городов с указанным климатом
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 42
+
+
+  /genocide/kill/{id}:
+    post:
+      tags: [Genocide]
+      summary: Уничтожить население города
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Население уничтожено
+        '404':
+          description: Город не найден
+
+  /genocide/move-to-poorest/{id}:
+    post:
+      tags: [Genocide]
+      summary: Переселить население города в город с самым низким уровнем жизни
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Переселение выполнено успешно
+        '404':
+          description: Город не найден
+
+components:
+  schemas:
+    City:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          minLength: 1
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        creationDate:
+          type: string
+          format: date-time
+          readOnly: true
+        area:
+          type: integer
+          minimum: 1
+        population:
+          type: integer
+          minimum: 1
+        metersAboveSeaLevel:
+          type: number
+          nullable: true
+        capital:
+          type: boolean
+        climate:
+          $ref: '#/components/schemas/Climate'
+          nullable: true
+        standardOfLiving:
+          $ref: '#/components/schemas/StandardOfLiving'
+        governor:
+          $ref: '#/components/schemas/Human'
+
+    CityFilterRequest:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+        sort:
+          type: array
+          description: Массив правил сортировки
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                enum: [ name, population, area, standardOfLiving ]
+              direction:
+                type: string
+                enum: [ asc, desc ]
+                default: asc
+          example:
+            - field: population
+              direction: desc
+            - field: name
+              direction: asc
+        filters:
+          type: array
+          description: Условия фильтрации
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                enum: [ name, population, area, climate, capital, standardOfLiving ]
+              operator:
+                type: string
+                enum: [ eq, gt, lt, gte, lte, ne ]
+                default: eq
+              value:
+                type: string
+          example:
+            - field: population
+              operator: gt
+              value: 100000
+            - field: climate
+              operator: eq
+              value: STEPPE
+
+    CityFilterResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        size:
+          type: integer
+          example: 10
+        totalItems:
+          type: integer
+          example: 125
+        totalPages:
+          type: integer
+          example: 13
+        hasNext:
+          type: boolean
+          example: true
+        hasPrevious:
+          type: boolean
+          example: false
+        sort:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: population
+              direction:
+                type: string
+                example: desc
+        filters:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              operator:
+                type: string
+              value:
+                type: string
+          example:
+            - field: population
+              operator: gt
+              value: 100000
+        elapsedTime:
+          type: number
+          description: Время выполнения запроса в миллисекундах
+          example: 34.5
+        timestamp:
+          type: string
+          format: date-time
+          example: 2025-10-25T18:00:00Z
+        items:
+          type: array
+          description: Список найденных городов
+          items:
+            $ref: '#/components/schemas/City'
+
+    CreateCityRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        area:
+          type: integer
+          minimum: 1
+        population:
+          type: integer
+          minimum: 1
+        metersAboveSeaLevel:
+          type: number
+          nullable: true
+        capital:
+          type: boolean
+        climate:
+          $ref: '#/components/schemas/Climate'
+          nullable: true
+        standardOfLiving:
+          $ref: '#/components/schemas/StandardOfLiving'
+        governor:
+          $ref: '#/components/schemas/Human'
+      required: [ name, coordinates, area, population, capital, standardOfLiving, governor ]
+
+    UpdateCityRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateCityRequest'
+
+    Coordinates:
+      type: object
+      properties:
+        x:
+          type: number
+          maximum: 329
+        y:
+          type: integer
+          minimum: -663
+      required: [x, y]
+
+    Human:
+      type: object
+      properties:
+        age:
+          type: integer
+          minimum: 1
+      required: [age]
+
+    Climate:
+      type: string
+      enum: [TROPICAL_SAVANNA, STEPPE, SUBARCTIC, POLAR_ICECAP]
+
+    StandardOfLiving:
+      type: string
+      enum: [HIGH, VERY_LOW, ULTRA_LOW]
